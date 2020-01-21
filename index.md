@@ -7,6 +7,7 @@ Text can be **bold**, _italic_, or ~~strikethrough~~.
 [Link to another page](./another-page.html).
 
 [About](/about/index.md)
+
 [Code Page](/code/index.md)
 
 There should be whitespace between paragraphs.
