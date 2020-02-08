@@ -5,7 +5,7 @@ This portfolio is used to house my analytical projects that I have been working 
 
 [Machine Learning Review from ISLR](./ML_ISLR.html).
 
-[MLB Project](/code/index.md)
+[MLB Project](/code/MLBProject.ipynb)
 
 
 
