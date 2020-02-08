@@ -5,9 +5,7 @@ This portfolio is used to house my analytical projects that I have been working 
 
 [Link to another page](./another-page.html).
 
-[About](/about/index.md)
-
-[Code Page](/code/index.md)
+[MLB Project](/code/index.md)
 
 
 
