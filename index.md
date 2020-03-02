@@ -7,7 +7,7 @@ This portfolio is used to house my analytical projects that I have been working 
 
 [MLB Project](/mlb/index.md)
 
-[Time Series Analysis in R](./Time Series Analysis - Oranges Growing Season.html)
+[Time Series Analysis in R](./Time_Series_Analysis_OrangesGrowingSeason.html)
 
 
 
