@@ -1,0 +1,142 @@
+---
+title: "What Ratio Will Predict Home Runs: 2019 Data"
+author: "Andrew Picciano"
+date: "January 18, 2020"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 4
+    theme: readable
+    highlight: haddock
+    fig_width: 16
+    fig_height: 12
+---
+
+<style type="text/css">
+
+body{ /* Normal  */
+      font-size: 20px;
+}
+
+code.r{ /* Code block */
+    font-size: 18px;
+}
+</style>
+
+## Background
+
+I am trying to predict the number of home runs (HR's) based on a series of predictors from 2019 hitting statistics. The statistics include: Games, At-Bats, Runs, Hits, Doubles (2B), Triples (3B), RBI, BB (Walks), SO (Strikeouts), SB (Stolen Bases), CS (Caught Stealing), BA (Batting Average).
+
+```{r}
+rm(list=ls()) # clear environment
+# Load libraries function
+installIfAbsentAndLoad <- function(neededVector) {
+  for(thispackage in neededVector) {
+    if( ! require(thispackage, character.only = T) )
+    { install.packages(thispackage)}
+    library(thispackage, character.only = T)
+  }
+}
+par(mfrow =c(1,1))
+needed <- c('tree', "ISLR")
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r echo=TRUE,message=FALSE, warning=FALSE}
+data <- read.csv('2019MLBstats.csv', header = TRUE, sep = ',')
+# To take out impact of players that only played part of season, make ratios of BB, SO, Hits on a per game or per at bat level
+BB_Ratio <- data$BB / data$AB # Create BB_Ratio: Walk Ratio
+SO_Ratio <- data$SO / data$AB # Create SO_Ratio: Strikeout Ratio 
+Hits_Game <- data$H / data$G  # Create Hits_Game: 
+data2 <- data.frame(data, BB_Ratio, SO_Ratio, Hits_Game) #create dataframe with new calculations
+y_HR <- data2[10]
+trainIndex <- sample(nrow(data2), nrow(data2) * .8)  # assign 80% of rows to get train rows
+Xtrain <- data2[trainIndex, -10] # make the train row X's. DO NOT pull in the HR column since trying to predict it
+Xtest <- data2[-trainIndex, -10] # make test row X's. There are 70 rows since taking 20% of rows
+Ytrain <- data2[trainIndex, 10] 
+Ytest <- data2[-trainIndex, 10] 
+```
+
+## Exploratory Analysis
+
+Do some exploratory analysis to see relationship between HR and ratios I created. The purpose is to find linearity. If not linear, I will use some higher level polynomial terms. Also, if no relationship, I will remove it from the analysis.
+
+##### Strikeout Ratio
+
+```{r echo=TRUE}
+plot(data2$SO_Ratio, data2$HR, main = 'HR vs SO_Ratio', xlab = 'Strikeout Ratio', ylab = 'Home Runs')
+lm.fit2 <- lm(data2$HR ~ data2$SO_Ratio , data = data2)
+abline(lm.fit2)
+summary(lm.fit2)
+```
+
+Data indicates very minimal linearity or relationship. Players who hit the same number of HR seem to be on the same level of Strikeout ratio. I added abline. Since abline slope is relatively flat, there isn't much, if at all a relationship. Surprising, I was expecting to see a negative correlation between HR and SO_Ratio; better HR hitters would have a lower *SO_Ratio*. Running summary on the linear model shows a high p-value, indicating a lack of statistical significance since cannot reject the *Null hypothesis.*
+
+##### Walk Ratio
+
+```{r}
+plot(data2$BB_Ratio, data2$HR, main = 'HR vs BB_Ratio', xlab = 'Walk Ratio', ylab = 'Home Runs')
+lm.fit5 <- lm(data2$HR ~ data2$BB_Ratio, data = data2)
+abline(lm.fit5)
+```
+Data indicates there is a better relationship between players having a 'better eye' and hitting more HR. slope of abline is higher than the SO_Ration so more of a relationship.
+
+##### Hits per Game Ratio
+```{r}
+plot(data2$Hits_Game, data2$HR, main = 'HR vs Hits per Game', xlab = 'Hits Per Game', ylab = 'Home Runs')
+lm.fit3 <- lm(data2$HR ~ data2$Hits_Game , data = data2)
+abline(lm.fit3)
+
+```
+Data indicates there is a direct linear relationship between players having more hits and hitting more HR. This isnt surprising seeing players who hit got on base with a hit in one At Bat, can also hit a HR in same game. I will use this information later on.
+
+## Fit Linear Regression Models:
+```{r echo=FALSE,message=FALSE, warning=FALSE}
+lm.fit <- lm(data2$HR ~ data2$BB_Ratio + data2$SO_Ratio + Hits_Game, data = data2)
+summary(lm.fit)
+```
+
+```{r}
+lm.fit2 <- lm(data2$HR ~ data2$SO_Ratio , data = data2)
+# summary(lm.fit2)
+
+lm.fit3 <- lm(data2$HR ~ data2$Hits_Game , data = data2)
+summary(lm.fit3)
+
+lm.fit4 <- lm(data2$HR ~ data2$BB_Ratio + data2$Hits_Game , data = data2)
+summary(lm.fit4)
+
+lm.fit5 <- lm(data2$HR ~ data2$BB_Ratio, data = data2)
+summary(lm.fit5)
+```
+
+Hypothesis testing. We must determine what linear modelto use.
+Try fitting a linear model with a linear model, as well as second, third, fourth and fifth order polynomials
+**Which model is best?**
+The ANOVA tests the hypothesis that the current model, 'fit.3' or 'fit.5' for example, is as sufficient to explain the data as the next most complex model, in this case, 'fit.4'. For reference:
+fit.3 = Just looking at Hits per Game
+fit.5 = Just looking at BB_Ratio
+fit.4 = BOTH Hits per Game and BB_Ratio
+
+```{r}
+
+anova(lm.fit3, lm.fit5, lm.fit4)
+```
+
+
+After running an ANOVA (Analsis of Variance), I see that I should use **BOTH** BB_Ratio and Hits_Game seem to provide lowest Residual Sum of Squares (a Cost Function we are trying to minimize). In addition, the p-value is below the alpha of 0.05, so this model is significant. 
+
+I want to doublecheck multicollinearity, I want to do a Variance Inflation Factor - which measures collinearity. If a value is above 5 or 10, indicates multicollinearity and I can choose simpler model.
+Good news, only 1 so unimportant.
+
+```{r}
+
+library(car)
+vif(lm.fit4)
+```
+
+
